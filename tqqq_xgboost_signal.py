@@ -202,13 +202,72 @@ def majority_vote(models, X):
 
     return np.array(final_predictions)
 
+def cashflow_forecast(starting_cash, predictions, data, X_test_index):
+    """
+    Simulates a cashflow forecast based on trading signals and plots portfolio value over time.
+    
+    Args:
+    - starting_cash (float): Initial capital available for investment.
+    - predictions (array-like): Predicted signals (-1 for Sell, 1 for Buy, 0 for Hold).
+    - data (DataFrame): Data containing stock prices.
+    - X_test_index (Index): Index of the test set for alignment with predictions.
+    
+    Returns:
+    - cashflow_df (DataFrame): DataFrame tracking cashflow over time.
+    """
+    # Align data to predictions
+    data = data.loc[X_test_index]
+    data['Predicted_Signal'] = predictions
+    data = data.sort_index()
 
+    # Initialize variables
+    cash = starting_cash
+    stocks_held = 0
+    cashflow_records = []
+
+    # Simulate cashflow based on predictions
+    for i in range(len(data)):
+        date = data.index[i]
+        signal = data['Predicted_Signal'].iloc[i]
+        close_price = data['Close'].iloc[i]
+
+        if signal == 1:  # Buy
+            if cash > 0:
+                stocks_held = cash / close_price
+                cash = 0
+                cashflow_records.append({'Date': date, 'Action': 'Buy', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+        elif signal == -1:  # Sell
+            if stocks_held > 0:
+                cash = stocks_held * close_price
+                stocks_held = 0
+                cashflow_records.append({'Date': date, 'Action': 'Sell', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+        else:  # Hold
+            cashflow_records.append({'Date': date, 'Action': 'Hold', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+
+    # Create DataFrame for cashflow tracking
+    cashflow_df = pd.DataFrame(cashflow_records)
+    cashflow_df.set_index('Date', inplace=True)
+
+    # Add a column for total value (cash + stocks value)
+    cashflow_df['Total_Value'] = cashflow_df['Cash'] + (cashflow_df['Stocks'] * data['Close'])
+
+    # Plot the total portfolio value over time
+    plt.figure(figsize=(10, 6))
+    plt.plot(cashflow_df.index, cashflow_df['Total_Value'], label='Total Portfolio Value', color='blue', alpha=0.7)
+    plt.title('Portfolio Value Over Time')
+    plt.xlabel('Date')
+    plt.ylabel('Total Value ($)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    return cashflow_df
 
 # Main Execution
 if __name__ == "__main__":
     # Fetch Data
     today_date = datetime.today().strftime('%Y-%m-%d')
-    folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\model'
+    folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\XGB_stock_analysis_24YE\model'
     backtest_type= ''#'insample' #''#
     symbol = "TQQQ"
     start_date = "2017-12-01"
@@ -239,19 +298,19 @@ if __name__ == "__main__":
     models = []
     
     # Train 20 models
-    for i in range(19):
+    for i in range(9):
         # Split the data differently for each model
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=i)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=i)
         
         # Train the model
         model = train_xgboost(X_train, y_train, X_test, y_test)
-        model.save_model(folder+'\\tqqq_xgboost_model_20241208_model'+str(i)+'.json') 
+        model.save_model(folder+'\\tqqq_xgboost_model_20241215_model'+str(i)+'.json') 
         models.append(model)
-        
+    
     # prepare oot X_test
-    start_date = "2022-12-01"
-    end_date = "2024-12-01"
-    #end_date = today_date
+    start_date = "2023-12-01"
+    #end_date = "2024-12-01"
+    end_date = today_date
     data = fetch_data(symbol, start_date, end_date)
 
     # Feature Engineering and Labeling
@@ -277,7 +336,12 @@ if __name__ == "__main__":
 
     # Backtest using the aggregated predictions
     backtest(data, final_predictions_mapped, X_test_oot.index)
+    # Initial cash to start with
+    starting_cash = 10000
     
+    # Generate cashflow forecast and plot
+    cashflow = cashflow_forecast(starting_cash, final_predictions_mapped, data, X_test_oot.index)
+
     # Print recent buy/sell dates
     print_recent_buy_sell_dates(data, final_predictions_mapped, X_test_oot.index)
 

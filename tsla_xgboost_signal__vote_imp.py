@@ -100,7 +100,7 @@ if __name__ == "__main__":
     symbol = "TSLA"
     target_date=today_date #"2024-11-25"
     features = ['SMA_1', 'SMA_2', 'RSI', 'Volatility', 'Daily_Return']
-    folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\model'
+    folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\XGB_stock_analysis_24YE\model'
     # Load the saved model
     #model = xgb.XGBClassifier()  # or use any model class that you used during training
     model = xgb.XGBClassifier(
@@ -112,8 +112,8 @@ if __name__ == "__main__":
     #model.load_model('tqqq_xgboost_model_20241202.json')  # Load model from the saved file
     #model.load_model('tqqq_xgboost_model_20241202_model'+str(i)+'.json') 
     models=[]
-    for i in range(19):
-        model.load_model(folder+f'\{symbol}_xgboost_model_20241203_model'+str(i)+'.json') 
+    for i in range(9):
+        model.load_model(folder+f'\{symbol}_xgboost_model_20241215_model'+str(i)+'.json') 
         models.append(model)
     
     # Use the model for predictions
