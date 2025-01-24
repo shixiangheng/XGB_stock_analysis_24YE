@@ -77,39 +77,39 @@ def train_xgboost(X_train, y_train, X_test, y_test):
 
 
 # Step 5: Backtest and Evaluate
-def backtest(data, predictions, X_test_index):
-    # test_data = X_test.copy()  # Copy the features from X_test
-    # test_data['Signal'] = y_test
-    # data=test_data
-    data = data.loc[X_test.index]
-    # Track buy and sell points
-    data['Predicted_Signal'] = predictions
-    data['Buy_Signal'] = np.where(data['Predicted_Signal'] == 1, data['Close'], np.nan)  # Buy signals
-    data['Sell_Signal'] = np.where(data['Predicted_Signal'] == -1, data['Close'], np.nan)  # Sell signals
+# def backtest(data, predictions, X_test_index):
+#     # test_data = X_test.copy()  # Copy the features from X_test
+#     # test_data['Signal'] = y_test
+#     # data=test_data
+#     data = data.loc[X_test.index]
+#     # Track buy and sell points
+#     data['Predicted_Signal'] = predictions
+#     data['Buy_Signal'] = np.where(data['Predicted_Signal'] == 1, data['Close'], np.nan)  # Buy signals
+#     data['Sell_Signal'] = np.where(data['Predicted_Signal'] == -1, data['Close'], np.nan)  # Sell signals
 
-    # Calculate strategy returns
-    data['Strategy_Return'] = data['Predicted_Signal'].shift(1) * data['Daily_Return']
-    cumulative_strategy_return = (1 + data['Strategy_Return']).cumprod()
-    cumulative_market_return = (1 + data['Daily_Return']).cumprod()
+#     # Calculate strategy returns
+#     data['Strategy_Return'] = data['Predicted_Signal'].shift(1) * data['Daily_Return']
+#     cumulative_strategy_return = (1 + data['Strategy_Return']).cumprod()
+#     cumulative_market_return = (1 + data['Daily_Return']).cumprod()
 
-    # Plot the backtest results
-    plt.figure(figsize=(10, 6))
-    plt.plot(cumulative_strategy_return, label='Strategy Return', color='blue', alpha=0.7)
-    plt.plot(cumulative_market_return, label='Market Return', color='green', alpha=0.7)
+#     # Plot the backtest results
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(cumulative_strategy_return, label='Strategy Return', color='blue', alpha=0.7)
+#     plt.plot(cumulative_market_return, label='Market Return', color='green', alpha=0.7)
 
-    # Plot Buy and Sell signals
-    # Plot Buy Signals (assuming 'Buy_Signal' column exists in data)
-    plt.scatter(data.index, data['Buy_Signal'], marker='^', color='g', label='Buy Signal', alpha=1)
+#     # Plot Buy and Sell signals
+#     # Plot Buy Signals (assuming 'Buy_Signal' column exists in data)
+#     plt.scatter(data.index, data['Buy_Signal'], marker='^', color='g', label='Buy Signal', alpha=1)
 
-    # Plot Sell Signals (assuming 'Sell_Signal' column exists in data)
-    plt.scatter(data.index, data['Sell_Signal'], marker='v', color='r', label='Sell Signal', alpha=1)
+#     # Plot Sell Signals (assuming 'Sell_Signal' column exists in data)
+#     plt.scatter(data.index, data['Sell_Signal'], marker='v', color='r', label='Sell Signal', alpha=1)
 
-    plt.legend()
-    plt.title('Backtest Results with Buy/Sell Points')
-    plt.xlabel('Date')
-    plt.ylabel('Cumulative Return')
-    plt.grid(True)
-    plt.show()
+#     plt.legend()
+#     plt.title('Backtest Results with Buy/Sell Points')
+#     plt.xlabel('Date')
+#     plt.ylabel('Cumulative Return')
+#     plt.grid(True)
+#     plt.show()
 
 def backtest(data, predictions, X_test_index):
     # Track buy and sell points
@@ -203,56 +203,56 @@ def majority_vote(models, X):
     return np.array(final_predictions)
 
 
-def cashflow_forecast(starting_cash, predictions, data, X_test_index):
-    """
-    Simulates a cashflow forecast based on trading signals.
+# def cashflow_forecast(starting_cash, predictions, data, X_test_index):
+#     """
+#     Simulates a cashflow forecast based on trading signals.
     
-    Args:
-    - starting_cash (float): Initial capital available for investment.
-    - predictions (array-like): Predicted signals (-1 for Sell, 1 for Buy, 0 for Hold).
-    - data (DataFrame): Data containing stock prices.
-    - X_test_index (Index): Index of the test set for alignment with predictions.
+#     Args:
+#     - starting_cash (float): Initial capital available for investment.
+#     - predictions (array-like): Predicted signals (-1 for Sell, 1 for Buy, 0 for Hold).
+#     - data (DataFrame): Data containing stock prices.
+#     - X_test_index (Index): Index of the test set for alignment with predictions.
     
-    Returns:
-    - cashflow_df (DataFrame): DataFrame tracking cashflow over time.
-    """
-    # Align data to predictions
-    data = data.loc[X_test_index]
-    data['Predicted_Signal'] = predictions
-    data = data.sort_index()
+#     Returns:
+#     - cashflow_df (DataFrame): DataFrame tracking cashflow over time.
+#     """
+#     # Align data to predictions
+#     data = data.loc[X_test_index]
+#     data['Predicted_Signal'] = predictions
+#     data = data.sort_index()
 
-    # Initialize variables
-    cash = starting_cash
-    stocks_held = 0
-    cashflow_records = []
+#     # Initialize variables
+#     cash = starting_cash
+#     stocks_held = 0
+#     cashflow_records = []
 
-    # Simulate cashflow based on predictions
-    for i in range(len(data)):
-        date = data.index[i]
-        signal = data['Predicted_Signal'].iloc[i]
-        close_price = data['Close'].iloc[i]
+#     # Simulate cashflow based on predictions
+#     for i in range(len(data)):
+#         date = data.index[i]
+#         signal = data['Predicted_Signal'].iloc[i]
+#         close_price = data['Close'].iloc[i]
 
-        if signal == 1:  # Buy
-            if cash > 0:
-                stocks_held = cash / close_price
-                cash = 0
-                cashflow_records.append({'Date': date, 'Action': 'Buy', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
-        elif signal == -1:  # Sell
-            if stocks_held > 0:
-                cash = stocks_held * close_price
-                stocks_held = 0
-                cashflow_records.append({'Date': date, 'Action': 'Sell', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
-        else:  # Hold
-            cashflow_records.append({'Date': date, 'Action': 'Hold', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+#         if signal == 1:  # Buy
+#             if cash > 0:
+#                 stocks_held = cash / close_price
+#                 cash = 0
+#                 cashflow_records.append({'Date': date, 'Action': 'Buy', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+#         elif signal == -1:  # Sell
+#             if stocks_held > 0:
+#                 cash = stocks_held * close_price
+#                 stocks_held = 0
+#                 cashflow_records.append({'Date': date, 'Action': 'Sell', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
+#         else:  # Hold
+#             cashflow_records.append({'Date': date, 'Action': 'Hold', 'Price': close_price, 'Cash': cash, 'Stocks': stocks_held})
 
-    # Create DataFrame for cashflow tracking
-    cashflow_df = pd.DataFrame(cashflow_records)
-    cashflow_df.set_index('Date', inplace=True)
+#     # Create DataFrame for cashflow tracking
+#     cashflow_df = pd.DataFrame(cashflow_records)
+#     cashflow_df.set_index('Date', inplace=True)
 
-    # Add a column for total value (cash + stocks value)
-    cashflow_df['Total_Value'] = cashflow_df['Cash'] + (cashflow_df['Stocks'] * data['Close'])
+#     # Add a column for total value (cash + stocks value)
+#     cashflow_df['Total_Value'] = cashflow_df['Cash'] + (cashflow_df['Stocks'] * data['Close'])
 
-    return cashflow_df
+#     return cashflow_df
 
 def cashflow_forecast(starting_cash, predictions, data, X_test_index):
     """

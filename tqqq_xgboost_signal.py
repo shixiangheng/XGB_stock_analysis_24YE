@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import xgboost as xgb
 import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Step 1: Fetch Historical Data
 def fetch_data(symbol, start_date, end_date):
@@ -33,7 +33,7 @@ def add_features(df):
     df['RSI'] = calculate_rsi(df['Close'], window=rsi_window)
     df['Daily_Return'] = df['Close'].pct_change(periods=daily_return_window)
     df['Volatility'] = df['Close'].rolling(window=volatility_window).std()
-    
+    #df = df.dropna()
     return df
 
 # RSI Calculation
@@ -50,7 +50,8 @@ def create_labels(df, threshold=0.10):
     df['Signal'] = 0  # Default to Hold
     df.loc[df['Future_Return'] > threshold, 'Signal'] = 1  # Buy Signal
     df.loc[df['Future_Return'] < -threshold, 'Signal'] = -1  # Sell Signal
-    df = df.dropna()  # Drop rows with missing values
+    df = df.dropna(subset=['Future_Return'])  # Drop rows with missing values
+    #df = df.dropna()
     return df
 
 # Step 4: Train the XGBoost Model
@@ -77,39 +78,6 @@ def train_xgboost(X_train, y_train, X_test, y_test):
 
 
 # Step 5: Backtest and Evaluate
-def backtest(data, predictions, X_test_index):
-    # test_data = X_test.copy()  # Copy the features from X_test
-    # test_data['Signal'] = y_test
-    # data=test_data
-    data = data.loc[X_test.index]
-    # Track buy and sell points
-    data['Predicted_Signal'] = predictions
-    data['Buy_Signal'] = np.where(data['Predicted_Signal'] == 1, data['Close'], np.nan)  # Buy signals
-    data['Sell_Signal'] = np.where(data['Predicted_Signal'] == -1, data['Close'], np.nan)  # Sell signals
-
-    # Calculate strategy returns
-    data['Strategy_Return'] = data['Predicted_Signal'].shift(1) * data['Daily_Return']
-    cumulative_strategy_return = (1 + data['Strategy_Return']).cumprod()
-    cumulative_market_return = (1 + data['Daily_Return']).cumprod()
-
-    # Plot the backtest results
-    plt.figure(figsize=(10, 6))
-    plt.plot(cumulative_strategy_return, label='Strategy Return', color='blue', alpha=0.7)
-    plt.plot(cumulative_market_return, label='Market Return', color='green', alpha=0.7)
-
-    # Plot Buy and Sell signals
-    # Plot Buy Signals (assuming 'Buy_Signal' column exists in data)
-    plt.scatter(data.index, data['Buy_Signal'], marker='^', color='g', label='Buy Signal', alpha=1)
-
-    # Plot Sell Signals (assuming 'Sell_Signal' column exists in data)
-    plt.scatter(data.index, data['Sell_Signal'], marker='v', color='r', label='Sell Signal', alpha=1)
-
-    plt.legend()
-    plt.title('Backtest Results with Buy/Sell Points')
-    plt.xlabel('Date')
-    plt.ylabel('Cumulative Return')
-    plt.grid(True)
-    plt.show()
 
 def backtest(data, predictions, X_test_index):
     # Track buy and sell points
@@ -267,18 +235,20 @@ def cashflow_forecast(starting_cash, predictions, data, X_test_index):
 if __name__ == "__main__":
     # Fetch Data
     today_date = datetime.today().strftime('%Y-%m-%d')
+    # Get yesterday's date
+    yesterday_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
     folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\XGB_stock_analysis_24YE\model'
     backtest_type= ''#'insample' #''#
     symbol = "TQQQ"
     start_date = "2017-12-01"
-    end_date = "2023-12-01"
+    end_date =  "2023-12-01"
     #end_date = today_date
     data = fetch_data(symbol, start_date, end_date)
     threshold=0.10
     # Feature Engineering and Labeling
     data = add_features(data)
     data = create_labels(data,threshold)
-
+    
     # Prepare Data for Model
     features = ['SMA_1', 'SMA_2', 'RSI', 'Volatility', 'Daily_Return']
     target = 'Signal'
@@ -300,50 +270,55 @@ if __name__ == "__main__":
     # Train 20 models
     for i in range(9):
         # Split the data differently for each model
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=i)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=i)
         
         # Train the model
         model = train_xgboost(X_train, y_train, X_test, y_test)
-        model.save_model(folder+'\\tqqq_xgboost_model_20241215_model'+str(i)+'.json') 
+        model.save_model(folder+'\\tqqq_xgboost_model_20250123_model'+str(i)+'.json') 
         models.append(model)
     
     # prepare oot X_test
-    start_date = "2023-12-01"
+    oot_start_date = "2023-07-01"
     #end_date = "2024-12-01"
-    end_date = today_date
-    data = fetch_data(symbol, start_date, end_date)
+    oot_end_date = today_date
+    oot_data = fetch_data(symbol, oot_start_date, oot_end_date)
 
     # Feature Engineering and Labeling
-    data = add_features(data)
-    data = create_labels(data,threshold)
-    
+    oot_data = add_features(oot_data)
+    oot_data = create_labels(oot_data,threshold)
+    oot_data = oot_data.dropna()
     # Prepare X_test for OOT:
     features = ['SMA_1', 'SMA_2', 'RSI', 'Volatility', 'Daily_Return']
     target = 'Signal'
-    X = data[features]
-    y = data[target]
+    X = oot_data[features]
+    y = oot_data[target]
+    
     #_, X_test_oot, __, y_test_oot = train_test_split(X, y, test_size=0.8, random_state=20)
     X_test_oot=X
     y_test_oot=y
     # Get final predictions using majority voting
+    #X_test_oot = X_test_oot.dropna()
+    X_test_oot.to_excel('TQQQ_X_test_oot.xlsx',index=False)
+
+
     final_predictions = majority_vote(models, X_test_oot)
     
     # Map back predictions to labels for evaluation
-    final_predictions_mapped = final_predictions
+    # final_predictions_mapped = final_predictions
     
     # Evaluate the majority-vote model
-    print(classification_report(y_test_oot, final_predictions_mapped, target_names=['Sell', 'Hold', 'Buy']))
+    print(classification_report(y_test_oot, final_predictions, target_names=['Sell', 'Hold', 'Buy']))
 
     # Backtest using the aggregated predictions
-    backtest(data, final_predictions_mapped, X_test_oot.index)
+    backtest(oot_data, final_predictions, X_test_oot.index)
     # Initial cash to start with
     starting_cash = 10000
     
     # Generate cashflow forecast and plot
-    cashflow = cashflow_forecast(starting_cash, final_predictions_mapped, data, X_test_oot.index)
+    cashflow = cashflow_forecast(starting_cash, final_predictions, oot_data, X_test_oot.index)
 
     # Print recent buy/sell dates
-    print_recent_buy_sell_dates(data, final_predictions_mapped, X_test_oot.index)
+    print_recent_buy_sell_dates(oot_data, final_predictions, X_test_oot.index)
 
     # # Backtest
     '''
