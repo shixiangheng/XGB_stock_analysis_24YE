@@ -278,7 +278,7 @@ if __name__ == "__main__":
         models.append(model)
     
     # prepare oot X_test
-    oot_start_date = "2023-07-01"
+    oot_start_date = end_date#"2023-07-01"
     #end_date = "2024-12-01"
     oot_end_date = today_date
     oot_data = fetch_data(symbol, oot_start_date, oot_end_date)
@@ -320,23 +320,4 @@ if __name__ == "__main__":
     # Print recent buy/sell dates
     print_recent_buy_sell_dates(oot_data, final_predictions, X_test_oot.index)
 
-    # # Backtest
-    '''
-    # backtest(data, y_pred_original, X_test.index)
-    if backtest_type=='insample':
-        predictions = model.predict(X_train)
-        y_pred_in_sample = np.where(predictions == 0, -1, predictions - 1)
-        print(classification_report(y_train, y_pred_in_sample, target_names=['Sell', 'Hold', 'Buy']))
-        
-        # in-sample
-        backtest(data, y_pred_in_sample, X_train.index)
-    else:  # oos 
-        # Generate Predictions
-        predictions = model.predict(X_test)
-        y_pred_original = np.where(predictions == 0, -1, predictions - 1)
-        # Evaluate Model
-        print(classification_report(y_test, y_pred_original, target_names=['Sell', 'Hold', 'Buy']))
-        
-        print_recent_buy_sell_dates(data,y_pred_original, X_test.index)
-        backtest(data, y_pred_original, X_test.index)
-    '''
+   

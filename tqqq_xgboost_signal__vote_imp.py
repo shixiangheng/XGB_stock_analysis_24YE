@@ -16,32 +16,34 @@ from tqqq_xgboost_signal import fetch_data,add_features,calculate_rsi,backtest,m
 #from utils import forecast_for_date
 
 # Forecast for a Specific Date
-def forecast_for_date(data, feature, symbol, target_date, target_start_date, target_end_date, models):
-    # Fetch historical data up to the target date
-    days_to_show=20
-    
-    data = data.dropna()
-    # Check if the target date exists in the data
-    if target_date not in data.index:
-        print(f"Target date {target_date} not found in the data.")
-        # Prompt user to input the close price for the missing date
-        try:
-            close_price = float(input(f"Enter the close price for {target_date}: "))
-        except ValueError:
-            print("Invalid input. Close price must be a number.")
-            return
-
-        # Add the missing target date and close price to the data
-        new_row = pd.DataFrame({
-            'Close': [close_price],
-            'Open': [close_price],  # Placeholder values, as they won't affect feature calculations
-            'High': [close_price],
-            'Low': [close_price],
-            'Adj Close': [close_price],
-            'Volume': [10000]
-        }, index=[pd.Timestamp(target_date)])
-        data = pd.concat([data, new_row]).sort_index()
+def forecast_for_date(data, features, symbol, target_date, target_start_date, target_end_date, models, imp):
+    if imp:
+        # Fetch historical data up to the target date
+        days_to_show=20
         
+        data = data.dropna()
+        # Check if the target date exists in the data
+        if target_date not in data.index:
+            print(f"Target date {target_date} not found in the data.")
+            # Prompt user to input the close price for the missing date
+            try:
+                close_price = float(input(f"Enter the close price for {target_date}: "))
+            except ValueError:
+                print("Invalid input. Close price must be a number.")
+                return
+    
+            # Add the missing target date and close price to the data
+            new_row = pd.DataFrame({
+                'Close': [close_price],
+                'Open': [close_price],  # Placeholder values, as they won't affect feature calculations
+                'High': [close_price],
+                'Low': [close_price],
+                'Adj Close': [close_price],
+                'Volume': [10000]
+            }, index=[pd.Timestamp(target_date)])
+            data = pd.concat([data, new_row]).sort_index()
+    else:
+        data = data.dropna()
     
     # Add features
     data = add_features(data)
@@ -125,10 +127,10 @@ if __name__ == "__main__":
     # Use the model for predictions
     # Forecast for the given date
     #data=forecast_for_date(symbol, target_date,target_start_date, target_end_date, model)
-
+    imp=1
     data = fetch_data(symbol, start_date=target_start_date, end_date=target_end_date)
     #y_pred_final = np.where(final_predictions == 0, -1, predictions - 1)
-    X_,final_predictions_mapped=forecast_for_date(data, features, symbol, target_date,target_start_date, target_end_date, models)
+    X_,final_predictions_mapped=forecast_for_date(data, features, symbol, target_date,target_start_date, target_end_date, models,imp)
 
     backtest(X_, final_predictions_mapped, X_.index)
     print(f"Not accurate around the start date:{target_start_date}")
