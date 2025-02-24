@@ -9,9 +9,10 @@ import joblib  # To save and load the model
 # Parameters
 ticker_symbol = "TQQQ"
 vix_symbol = "^VIX"  # VIX symbol
-start_date = "2022-01-31"
+start_date = "2017-01-31"
 end_date = "2025-01-31"
 rsi_high_bond = 70  # RSI threshold
+down_percentage_threshold = 0.8
 
 # Function to calculate RSI
 def calculate_rsi(data, window=14):
@@ -44,6 +45,8 @@ def calculate_rsi_ema(data, window=14):
     # Return RSI, filling missing values at the start
     rsi[:window] = 50  # Handle the initial window
     return rsi
+SMA_1 = 'SMA_1'
+SMA_2 = 'SMA_2'
 
 if __name__ == "__main__":
 # Download stock price and VIX data
@@ -57,8 +60,8 @@ if __name__ == "__main__":
     historical_data['RSI'] = calculate_rsi_ema(historical_data)
     
     # Calculate SMA40 and SMA100
-    historical_data['SMA40'] = historical_data['Close'].rolling(window=40).mean()
-    historical_data['SMA100'] = historical_data['Close'].rolling(window=100).mean()
+    historical_data[SMA_1] = historical_data['Close'].rolling(window=40).mean()
+    historical_data[SMA_2] = historical_data['Close'].rolling(window=100).mean()
     
     # Calculate daily returns
     historical_data['Daily Return'] = historical_data['Close'].pct_change()
@@ -69,7 +72,7 @@ if __name__ == "__main__":
         
         if i + 22 < len(historical_data):  # Check for the next 22 days
             future_prices = historical_data['Close'].iloc[i + 1:i + 22]
-            if current_price * 0.9 < future_prices.mean():  # if not below 10% in next 22 BDs
+            if current_price * down_percentage_threshold < future_prices.mean():  # if not below 10% in next 22 BDs
                 if historical_data['RSI_Mod'].iloc[i] <= 70:  
                     historical_data['RSI_Mod'].iloc[i] = 70# 
                     #historical_data['RSI_Mod'].iloc[i] + 20  # Set RSI to 70
@@ -83,14 +86,13 @@ if __name__ == "__main__":
     historical_data.rename(columns={'Close_y': 'VIX'}, inplace=True)
     historical_data=historical_data.rename(columns={'Close_x':'Close'})
     # Drop rows with missing values
-    historical_data = historical_data.dropna()
     
     # Prepare features and target
-    X = historical_data[['Close', 'Daily Return', 'SMA40', 'SMA100', 'VIX','RSI']]
+    X = historical_data[['Close', 'Daily Return', SMA_1, SMA_2, 'VIX','RSI']]
     y = historical_data['RSI_Mod']
     
     # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, shuffle=False)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
     
     # XGBoost model
     model = xgb.XGBRegressor(objective='reg:squarederror', colsample_bytree=0.3, learning_rate=0.1,

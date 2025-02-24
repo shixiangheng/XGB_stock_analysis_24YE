@@ -19,6 +19,8 @@ from datetime import datetime, timedelta
 # Step 1: Fetch Historical Data
 def fetch_data(symbol, start_date, end_date):
     data = yf.download(symbol, start=start_date, end=end_date)
+    data = data.reset_index().droplevel(1, axis=1)
+    data.index = data['Date']
     return data
 
 # Step 2: Feature Engineering
@@ -274,7 +276,7 @@ if __name__ == "__main__":
         
         # Train the model
         model = train_xgboost(X_train, y_train, X_test, y_test)
-        model.save_model(folder+'\\tqqq_xgboost_model_20250123_model'+str(i)+'.json') 
+        model.save_model(folder+'\\tqqq_xgboost_model_20250210_model'+str(i)+'.json') 
         models.append(model)
     
     # prepare oot X_test

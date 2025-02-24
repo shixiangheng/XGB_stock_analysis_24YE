@@ -105,7 +105,7 @@ if __name__ == "__main__":
     today_date = datetime.today().strftime('%Y-%m-%d')
     target_start_date='2023-12-01'
     target_end_date=today_date
-    symbol = "tqqq"
+    symbol = "TQQQ"
     target_date=today_date #"2024-11-25"
     features = ['SMA_1', 'SMA_2', 'RSI', 'Volatility', 'Daily_Return']
     folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\XGB_stock_analysis_24YE\model'
