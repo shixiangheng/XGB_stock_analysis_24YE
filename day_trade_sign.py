@@ -5,7 +5,7 @@ import winsound
 from datetime import datetime, timedelta
 import alpaca_trade_api as tradeapi
 import pytz
-from utils_day_trade import generate_signals_and_backtest
+from utils_day_trade import generate_signals_and_backtest,generate_rsi3070_signals_and_backtest_delay
 eastern = pytz.timezone('US/Eastern')
 show_reason = 1
 # 用户填入自己的 API 认证
@@ -13,7 +13,7 @@ API_KEY = 'PK55SJLN5X7L81OB9D1P'
 SECRET_KEY = '3iWrQIdPWUlbNFV1wNcBzGx2JReYbMEQOXtx9rH0'
 BASE_URL = 'https://paper-api.alpaca.markets'
 #TICKER = 'TSLL'
-START_DATE = '2025-07-01'
+START_DATE = '2025-07-07'
 
 # 初始化API
 api = tradeapi.REST(API_KEY, SECRET_KEY, BASE_URL, api_version='v2')
@@ -46,94 +46,9 @@ def get_latest_data(TICKER):
     return bars
 
 def apply_strategy(df):
-    # df["ema9"] = df["close"].ewm(span=9).mean()
-    # df["ema21"] = df["close"].ewm(span=21).mean()
-    # df["vwap"] = (df["close"] * df["volume"]).cumsum() / df["volume"].cumsum()
-
-    # delta = df["close"].diff()
-    # gain = delta.where(delta > 0, 0).rolling(14).mean()
-    # loss = -delta.where(delta < 0, 0).rolling(14).mean()
-    # rs = gain / loss
-    # df["rsi"] = 100 - (100 / (1 + rs))
-
-    # df["signal"] = 0
-    # df["sell_signal"] = 0
-    # df["up1"] = df["close"].diff(1).shift(1) > 0
-    # df["up2"] = df["close"].diff(1).shift(2) > 0
-    # df["volup"] = df["volume"].shift(1) > df["volume"].shift(2)
-
-    # df.loc[
-    #     (df["ema9"] > df["ema21"]) &
-    #     (df["ema9"].shift(1) <= df["ema21"].shift(1)) &
-    #     (df["rsi"].between(50, 70)) &
-    #     df["up1"] & df["up2"] & df["volup"],
-    #     "signal"
-    # ] = 1
-
-    # # 出场逻辑（完整记录交易）
-    # holding = False
-    # buy_price = 0
-    # buy_datetime = None
-    # trades = []
-
-    # for i in range(len(df)):
-    #     row = df.iloc[i]
-    #     time = row.name
-
-    #     if row["signal"] == 1 and not holding:
-    #         holding = True
-    #         buy_price = row["open"]
-    #         buy_datetime = row["timestamp"] if "timestamp" in row else time
-
-    #     elif holding:
-    #         current_price = row["close"]
-    #         change_pct = (current_price - buy_price) / buy_price
-    #         duration = (time - buy_datetime).total_seconds() / 60 if buy_datetime else 0
-    #         vw_delta = (current_price - row["vwap"]) / row["vwap"]
-    #         rsi_prev = df["rsi"].iloc[i - 1] if i > 0 else row["rsi"]
-
-    #         # 止盈条件
-    #         tp1 = change_pct >= 0.015
-    #         tp2 = row["rsi"] > 70 and row["rsi"] < rsi_prev
-    #         tp3 = vw_delta > 0.025
-    #         if tp1 or tp2 or tp3:
-    #             df.at[time, "sell_signal"] = -1
-    #             sell_datetime = row["timestamp"] if "timestamp" in row else time
-    #             holding = False
-    #             if buy_datetime and sell_datetime:
-    #                 trades.append({
-    #                     "Buy_Time": buy_datetime,
-    #                     "Sell_Time": sell_datetime,
-    #                     "Buy_Price": buy_price,
-    #                     "Sell_Price": current_price,
-    #                     "Return": change_pct
-    #                 })
-    #                 buy_datetime = None
-    #             continue
-
-    #         # 止损条件
-    #         sl_conditions = [
-    #             change_pct <= -0.005,
-    #             row["ema9"] <= row["ema21"],
-    #             row["rsi"] <= 50,
-    #             row["close"] < row["vwap"],
-    #             duration > 15
-    #         ]
-    #         if sum(sl_conditions) >= 2:
-    #             df.at[time, "sell_signal"] = -1
-    #             sell_datetime = row["timestamp"] if "timestamp" in row else time
-    #             holding = False
-    #             if buy_datetime and sell_datetime:
-    #                 trades.append({
-    #                     "Buy_Time": buy_datetime,
-    #                     "Sell_Time": sell_datetime,
-    #                     "Buy_Price": buy_price,
-    #                     "Sell_Price": current_price,
-    #                     "Return": change_pct
-    #                 })
-    #                 buy_datetime = None
-    df, trades = generate_signals_and_backtest(df)
     
+    #df, trades = generate_signals_and_backtest(df)
+    df,trades = generate_rsi3070_signals_and_backtest_delay(df,0,40,60)
     # 🔔 只对最新K线触发信号播放声音
     latest = df.iloc[-1]
     # 转时区
@@ -165,7 +80,7 @@ def apply_strategy(df):
 def main_loop():
     while True:
         print(f"\n🕒 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Checking...")
-        for TICKER in ['TQQQ','TSLL','NVDL','GLD']:
+        for TICKER in ['TSLL','NVDL']:
             try:
                 df = get_latest_data(TICKER)
                 print(f"------------------Below For {TICKER}: ---------------")
@@ -174,7 +89,7 @@ def main_loop():
                 print(f"❌ Error: {e}")
             #print(f"!!!!!!!!!!!!!!! Above For {TICKER}: !!!!!!!!!!!!!!")
             print("⏳ Waiting for 5 minutes...\n")
-            
+        print(f"\n🕒 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Checking done...")
         time.sleep(200)
 
 if __name__ == "__main__":
