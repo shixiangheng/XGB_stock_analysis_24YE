@@ -122,6 +122,7 @@ if __name__ == "__main__":
     models=[]
     for i in range(9):
         model.load_model(folder+f'\{symbol}_xgboost_model_20241230_model'+str(i)+'.json') 
+        #model.load_model(folder+f'\{symbol}_xgboost_model_20250625_model'+str(i)+'.json')
         models.append(model)  # 20241230  # 20250123
     
     # Use the model for predictions

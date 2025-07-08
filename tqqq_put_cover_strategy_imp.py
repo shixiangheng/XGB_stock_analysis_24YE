@@ -50,6 +50,9 @@ put_price_col = 'Put_Price'
 
 # Calculate today's score
 today_score = today_score_prob * historical_data[down_percentage_col].iloc[-1] * today_close / put_price_today
+print(f"today_score_prob: {today_score_prob}")
+print(f"historical_data[down_percentage_col].iloc[-1]: {historical_data[down_percentage_col].iloc[-1]}")
+
 
 # Calculate the score threshold as the rolling mean of past scores
 score_threshold = historical_data['score'].rolling(window=22*6, min_periods=1).mean().iloc[-1]
@@ -70,6 +73,40 @@ if today_rsi >= predicted_rsi * 0.95 and today_score > score_threshold:
     #     S=today_close, K=strike_price, T=days_to_expiration / 252,
     #     r=risk_free_rate, sigma=today_iv, option_type="put"
     # )
-    print(f"BUY PUT OPTION: Strike Price = {strike_price}, Premium = {put_price_today * 100:.2f}")
+    print(f"BUY PUT OPTION: Strike Price = {strike_price}, Premium = {put_price_today}")
 else:
     print("No put option needed today.")
+
+
+df = historical_data.reset_index()[:30]
+
+import matplotlib.pyplot as plt
+
+# Load your CSV or DataFrame
+# Example: df = pd.read_csv("your_file.csv", parse_dates=['Date'])
+
+# Ensure 'Date' is datetime
+df['Date'] = pd.to_datetime(df['Date'])
+
+# Set up figure and primary y-axis
+fig, ax1 = plt.subplots(figsize=(14, 6))
+
+# Plot Close and Portfolio Value on left y-axis
+ax1.plot(df['Date'], df['Close'], label='TQQQ Close', color='blue')
+#ax1.plot(df['Date'], df['Portfolio Value'], label='Portfolio Value', color='green')
+ax1.set_xlabel('Date')
+ax1.set_ylabel('Price / Portfolio Value')
+ax1.legend(loc='upper left')
+ax1.grid(True)
+
+# Create secondary y-axis for score
+ax2 = ax1.twinx()
+ax2.plot(df['Date'], df['Predicted_RSI_Threshold'], label='predicted_rsi_thresholds', color='red', linestyle='--')
+ax2.set_ylabel('predicted_rsi_thresholds')
+ax2.axhline(0, color='gray', linestyle=':', linewidth=1)
+ax2.legend(loc='upper right')
+
+# Title and layout
+plt.title('TQQQ Close, Portfolio Value, and Score')
+plt.tight_layout()
+plt.show()

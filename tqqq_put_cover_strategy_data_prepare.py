@@ -118,3 +118,4 @@ historical_data = add_return_percentage(historical_data, 'Close', previous_perio
 historical_data[score_col] = historical_data[pd_col] * historical_data[down_percentage_col] * historical_data['Close'] / historical_data[put_price_col]
 historical_data.to_excel(output_file)
 print('Output File:',output_file)
+

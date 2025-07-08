@@ -11,7 +11,7 @@ from tqqq_utils import *
 ticker_symbol = "TQQQ"
 vix_symbol = "^VIX"
 start_date = "2021-01-31"
-end_date = "2025-01-31"
+end_date = "2025-04-30"
 shares_held = 100  # Number of shares held
 risk_free_rate = 0.03  # Annualized risk-free rate
 days_to_expiration = 22  # Option expiration in days
@@ -325,3 +325,4 @@ plt.show()
 
 put_info_df.to_excel('put_price.xlsx', index=False)
 historical_data.reset_index().to_excel('historical_data.xlsx', index=False)
+

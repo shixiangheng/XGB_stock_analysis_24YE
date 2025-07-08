@@ -242,11 +242,11 @@ if __name__ == "__main__":
     folder=r'C:\Users\shixiangheng\Desktop\Henz\stock\XGB_stock_analysis_24YE\model'
     backtest_type= ''#'insample' #''#
     symbol = "TQQQ"
-    start_date = "2017-12-01"
-    end_date =  "2023-12-01"
+    start_date = "2019-12-31"
+    end_date =  "2024-12-31"
     #end_date = today_date
     data = fetch_data(symbol, start_date, end_date)
-    threshold=0.10
+    threshold=0.1   # 25 precision
     # Feature Engineering and Labeling
     data = add_features(data)
     data = create_labels(data,threshold)
@@ -276,7 +276,7 @@ if __name__ == "__main__":
         
         # Train the model
         model = train_xgboost(X_train, y_train, X_test, y_test)
-        model.save_model(folder+'\\tqqq_xgboost_model_20250210_model'+str(i)+'.json') 
+        model.save_model(folder+'\\tqqq_xgboost_model_20250625_model'+str(i)+'.json') 
         models.append(model)
     
     # prepare oot X_test
@@ -307,10 +307,12 @@ if __name__ == "__main__":
     
     # Map back predictions to labels for evaluation
     # final_predictions_mapped = final_predictions
-    
+    print(final_predictions)
     # Evaluate the majority-vote model
-    print(classification_report(y_test_oot, final_predictions, target_names=['Sell', 'Hold', 'Buy']))
-
+    try:
+        print(classification_report(y_test_oot, final_predictions, target_names=['Sell', 'Hold', 'Buy']))
+    except:
+        pass
     # Backtest using the aggregated predictions
     backtest(oot_data, final_predictions, X_test_oot.index)
     # Initial cash to start with
