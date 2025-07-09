@@ -61,7 +61,7 @@ def generate_signals_and_backtest(df):
         time = row.name
         if row["signal"] == 1 and not holding:
             holding = True
-            buy_price = row["open"]
+            buy_price = row["close"]
             buy_datetime = row["timestamp"] if "timestamp" in row else time
 
         elif holding:
@@ -205,7 +205,7 @@ def generate_signals_and_backtest_delay(df, delay=3):
 
         if row["signal"] == 1 and not holding:
             holding = True
-            buy_price = row["open"]
+            buy_price = row["close"]
             buy_datetime = row["timestamp"] if "timestamp" in row else time
 
         elif holding:
@@ -309,7 +309,7 @@ def backtest_plot(ticker,df,trades):
             dt = row["timestamp"] if "timestamp" in row else row["Datetime"]
             dt = pd.to_datetime(dt)
             dt_eastern = dt.astimezone(eastern)
-            print(f"🟢 {dt_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} @ {row['open']:.2f}")
+            print(f"🟢 {dt_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} @ {row['close']:.2f}")
 
         print("\n📋 Recent Sell Signals:")
         for _, row in recent_sells.iterrows():
@@ -343,180 +343,6 @@ def backtest_plot(ticker,df,trades):
     plt.tight_layout()
     plt.show()
 
-
-
-# def generate_rsi3070_signals_and_backtest_delay(df, delay=3, low_rsi=30, high_rsi=70, profit_thresh=0.01, loss_thresh=-0.005):
-#     """
-#     Generate buy when RSI crosses 30, sell when RSI crosses 70, or hits profit/loss threshold.
-#     All signals are delayed by `delay` bars.
-#     """
-#     # 计算 RSI
-#     delta = df["close"].diff()
-#     gain = delta.where(delta > 0, 0).rolling(14).mean()
-#     loss = -delta.where(delta < 0, 0).rolling(14).mean()
-#     rs = gain / loss
-#     df["rsi"] = 100 - (100 / (1 + rs))
-
-#     # 初始化信号列
-#     df["signal_raw"] = 0
-#     df["signal"] = 0
-#     df["sell_signal_raw"] = 0
-#     df["sell_signal"] = 0
-
-#     # RSI 上穿 30 买入信号
-#     df["rsi_prev"] = df["rsi"].shift(1)
-#     df.loc[(df["rsi_prev"] < low_rsi) & (df["rsi"] >= low_rsi), "signal_raw"] = 1
-#     df["signal"] = df["signal_raw"].shift(delay).fillna(0)
-
-#     holding = False
-#     buy_price = 0
-#     buy_datetime = None
-#     trades = []
-
-#     for i in range(len(df)):
-#         row = df.iloc[i]
-#         time = row.name
-
-#         # 延迟买入
-#         if row["signal"] == 1 and not holding:
-#             holding = True
-#             buy_price = row["open"]
-#             buy_datetime = row["timestamp"] if "timestamp" in row else time
-
-#         elif holding:
-#             current_price = row["close"]
-#             change_pct = (current_price - buy_price) / buy_price
-#             rsi = row["rsi"]
-
-#             # 卖出条件
-#             sell_reason = None
-#             if rsi >= high_rsi:
-#                 sell_reason = "RSI ≥ 70"
-#             elif change_pct >= profit_thresh:
-#                 sell_reason = f"Profit ≥ {profit_thresh:.1%}"
-#             elif change_pct <= loss_thresh:
-#                 sell_reason = f"Loss ≤ {loss_thresh:.1%}"
-
-#             if sell_reason:
-#                 df.at[time, "sell_signal_raw"] = -1
-#                 if i + delay < len(df):
-#                     df.iat[i + delay, df.columns.get_loc("sell_signal")] = -1
-#                     sell_row = df.iloc[i + delay]
-#                     sell_time = sell_row.name
-#                     sell_price = sell_row["close"]
-#                     sell_datetime = sell_row["timestamp"] if "timestamp" in sell_row else sell_time
-#                 else:
-#                     print(time)
-#                     print(f'❗ {sell_reason} triggered but cannot delay (out of bound)')
-#                     sell_datetime = row["timestamp"] if "timestamp" in row else time
-#                     sell_price = current_price
-#                     df.at[time, "sell_signal"] = -1
-
-#                 trades.append({
-#                     "Buy_Time": buy_datetime,
-#                     "Sell_Time": sell_datetime,
-#                     "Buy_Price": buy_price,
-#                     "Sell_Price": sell_price,
-#                     "Return": (sell_price - buy_price) / buy_price,
-#                     "Sell_Reason": sell_reason
-#                 })
-#                 holding = False
-#                 buy_datetime = None
-
-#     return df, trades
-# def generate_rsi3070_signals_and_backtest_delay(df, delay=3, low_rsi=30, high_rsi=70, profit_thresh=0.01, loss_thresh=-0.005):
-#     """
-#     Generate buy when RSI crosses 30 (with 2 up bars and volume increase),
-#     sell when RSI crosses 70, or hits profit/loss threshold.
-#     All signals are delayed by `delay` bars.
-#     """
-#     # 计算 RSI
-#     delta = df["close"].diff()
-#     gain = delta.where(delta > 0, 0).rolling(14).mean()
-#     loss = -delta.where(delta < 0, 0).rolling(14).mean()
-#     rs = gain / loss
-#     df["rsi"] = 100 - (100 / (1 + rs))
-
-#     # 计算前两根上涨和放量
-#     df["up1"] = df["close"].diff(1).shift(1) > 0
-#     df["up2"] = df["close"].diff(1).shift(2) > 0
-#     df["vol_up"] = df["volume"].shift(1) > df["volume"].shift(2)
-
-#     # 初始化信号列
-#     df["signal_raw"] = 0
-#     df["signal"] = 0
-#     df["sell_signal_raw"] = 0
-#     df["sell_signal"] = 0
-
-#     # RSI 上穿 30 且满足上涨/放量条件时产生买入信号
-#     df["rsi_prev"] = df["rsi"].shift(1)
-#     df.loc[
-#         (df["rsi_prev"] < low_rsi) &
-#         (df["rsi"] >= low_rsi) &
-#         #df["up1"] & df["up2"] ,
-#         df["vol_up"],
-#         "signal_raw"
-#     ] = 1
-
-#     # 延迟信号
-#     df["signal"] = df["signal_raw"].shift(delay).fillna(0)
-
-#     holding = False
-#     buy_price = 0
-#     buy_datetime = None
-#     trades = []
-
-#     for i in range(len(df)):
-#         row = df.iloc[i]
-#         time = row.name
-
-#         # 延迟买入
-#         if row["signal"] == 1 and not holding:
-#             holding = True
-#             buy_price = row["open"]
-#             buy_datetime = row["timestamp"] if "timestamp" in row else time
-
-#         elif holding:
-#             current_price = row["close"]
-#             change_pct = (current_price - buy_price) / buy_price
-#             rsi = row["rsi"]
-
-#             # 卖出条件
-#             sell_reason = None
-#             if rsi >= high_rsi:
-#                 sell_reason = "RSI ≥ 70"
-#             elif change_pct >= profit_thresh:
-#                 sell_reason = f"Profit ≥ {profit_thresh:.1%}"
-#             elif change_pct <= loss_thresh:
-#                 sell_reason = f"Loss ≤ {loss_thresh:.1%}"
-
-#             if sell_reason:
-#                 df.at[time, "sell_signal_raw"] = -1
-#                 if i + delay < len(df):
-#                     df.iat[i + delay, df.columns.get_loc("sell_signal")] = -1
-#                     sell_row = df.iloc[i + delay]
-#                     sell_time = sell_row.name
-#                     sell_price = sell_row["close"]
-#                     sell_datetime = sell_row["timestamp"] if "timestamp" in sell_row else sell_time
-#                 else:
-#                     print(time)
-#                     print(f'❗ {sell_reason} triggered but cannot delay (out of bound)')
-#                     sell_datetime = row["timestamp"] if "timestamp" in row else time
-#                     sell_price = current_price
-#                     df.at[time, "sell_signal"] = -1
-
-#                 trades.append({
-#                     "Buy_Time": buy_datetime,
-#                     "Sell_Time": sell_datetime,
-#                     "Buy_Price": buy_price,
-#                     "Sell_Price": sell_price,
-#                     "Return": (sell_price - buy_price) / buy_price,
-#                     "Sell_Reason": sell_reason
-#                 })
-#                 holding = False
-#                 buy_datetime = None
-
-#     return df, trades
 
 
 def max_consecutive_losses(trades_df):
@@ -587,7 +413,6 @@ def generate_rsi3070_signals_and_backtest_delay(df, delay=3, low_rsi=30, high_rs
     df.loc[
         (df["rsi_prev"] < low_rsi) &
         (df["rsi"] >= low_rsi) &
-        #df["up1"] & df["up2"] &
         df["vol_up"] &
         (df["ema_diff"] > df["ema_diff_prev"]),
         "signal_raw"
@@ -609,7 +434,7 @@ def generate_rsi3070_signals_and_backtest_delay(df, delay=3, low_rsi=30, high_rs
         # Execute delayed buy
         if row["signal"] == 1 and not holding:
             holding = True
-            buy_price = row["open"]
+            buy_price = row["close"]
             buy_datetime = row["timestamp"] if "timestamp" in row else time
 
         elif holding:
@@ -655,3 +480,159 @@ def generate_rsi3070_signals_and_backtest_delay(df, delay=3, low_rsi=30, high_rs
                 buy_datetime = None
 
     return df, trades
+
+
+def check_recent_deals(df,trades,show_reason=1):
+    # 🧾 显示最近5个买卖信号
+    recent_buys = df[df["signal"] == 1].tail(5)
+    recent_sells = df[df["sell_signal"] == -1].tail(5)
+
+    print("\n📋 Recent Buy Signals:")
+    for idx, row in recent_buys.iterrows():
+        # 转时区
+        idx_eastern = idx.tz_convert(eastern) if idx.tzinfo else pytz.utc.localize(idx).astimezone(eastern)
+        print(f"🟢 {idx_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} @ {row['close']:.2f}")
+
+    print("\n📋 Recent Sell Signals:")
+    for idx, row in recent_sells.iterrows():
+        idx_eastern = idx.tz_convert(eastern) if idx.tzinfo else pytz.utc.localize(idx).astimezone(eastern)
+        print(f"🔴 {idx_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} @ {row['close']:.2f}")
+    if show_reason:
+        df_trades = pd.DataFrame(trades)
+        # Step 1: Localize to UTC if not already
+        if df_trades["Buy_Time"].dt.tz is None or df_trades["Sell_Time"].dt.tz is None:
+            df_trades["Buy_Time"] = df_trades["Buy_Time"].dt.tz_localize("UTC")
+            df_trades["Sell_Time"] = df_trades["Sell_Time"].dt.tz_localize("UTC")
+        # Step 2: Convert to US Eastern Time (handles daylight saving)
+        df_trades["Buy_Time"] = df_trades["Buy_Time"].dt.tz_convert("US/Eastern")
+        df_trades["Sell_Time"] = df_trades["Sell_Time"].dt.tz_convert("US/Eastern")
+        print(df_trades.tail(5))
+
+def generate_rsi_dynamic_signals_and_backtest_delay(df, delay=3, low_rsi_base=30, high_rsi=70, profit_thresh=0.01, loss_thresh=-0.005):
+    """
+    Generate buy when RSI crosses 30 (with volume increase and EMA divergence),
+    dynamically adjust low_rsi using close prices around buy signal.
+    Sell when RSI reaches 70, profit/loss threshold, or EMA diff shrinks.
+    All executions use 'close' prices.
+    """
+
+    # --- RSI calculation ---
+    delta = df["close"].diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(14).mean()
+    rs = gain / loss
+    df["rsi"] = 100 - (100 / (1 + rs))
+
+    # --- EMA calculation ---
+    df["ema9"] = df["close"].ewm(span=9).mean()
+    df["ema21"] = df["close"].ewm(span=21).mean()
+    df["ema_diff"] = df["ema9"] - df["ema21"]
+    df["ema_diff_prev"] = df["ema_diff"].shift(1)
+
+    # --- Volume condition ---
+    df["vol_up"] = df["volume"].shift(1) > df["volume"].shift(2)
+
+    # --- Signal initialization ---
+    df["signal_raw"] = 0
+    df["signal"] = 0
+    df["sell_signal_raw"] = 0
+    df["sell_signal"] = 0
+    df["rsi_prev"] = df["rsi"].shift(1)
+    base_rsi = low_rsi_base
+    hard_lower = 35
+    hard_upper = 50
+    # --- Iterate to detect signal with dynamic RSI adjustment ---
+    for i in range(3, len(df) - 3):  # Ensure enough context before/after
+        if base_rsi<hard_lower or base_rsi>hard_upper:
+            base_rsi = 40
+        rsi_prev = df.at[df.index[i - 1], "rsi"]
+        rsi_now = df.at[df.index[i], "rsi"]
+
+        if pd.notna(rsi_prev) and pd.notna(rsi_now) and rsi_prev < base_rsi <= rsi_now:
+            close_now = df.at[df.index[i], "close"]
+            closes_before = df["close"].iloc[i - 3:i]
+            closes_after = df["close"].iloc[i + 1:i + 4]
+
+            # Adjust low_rsi downward if prior 3 closes are all lower
+            if all(cl < close_now for cl in closes_before):
+                low_close_rsi = df["rsi"].iloc[i - 3:i].loc[closes_before.idxmin()]
+                if low_close_rsi < base_rsi:
+                    base_rsi -= 0.1 * abs(low_close_rsi - base_rsi)
+            else:
+                base_rsi += 0.1
+            # # Adjust low_rsi upward if next 3 closes are all lower
+            # elif all(cl < close_now for cl in closes_after):
+            #     low_close_rsi = df["rsi"].iloc[i + 1:i + 4].loc[closes_after.idxmin()]
+            #     if low_close_rsi < base_rsi:
+            #         base_rsi += 0.1 * abs(low_close_rsi - base_rsi)
+
+            # Final buy condition check
+            if (
+                df.at[df.index[i - 1], "rsi"] < base_rsi and
+                df.at[df.index[i], "rsi"] >= base_rsi and
+                df.at[df.index[i - 1], "ema_diff"] < df.at[df.index[i], "ema_diff"] and
+                df.at[df.index[i], "vol_up"]
+            ):
+                df.at[df.index[i], "signal_raw"] = 1
+
+    # --- Delayed Buy Signal ---
+    df["signal"] = df["signal_raw"].shift(delay).fillna(0)
+
+    # --- Backtest ---
+    holding = False
+    buy_price = 0
+    buy_datetime = None
+    trades = []
+
+    for i in range(len(df)):
+        row = df.iloc[i]
+        time = row.name
+
+        if row["signal"] == 1 and not holding:
+            holding = True
+            buy_price = row["close"]
+            buy_datetime = row["timestamp"] if "timestamp" in row else time
+
+        elif holding:
+            current_price = row["close"]
+            change_pct = (current_price - buy_price) / buy_price
+            rsi = row["rsi"]
+
+            # --- Sell logic ---
+            sell_reason = None
+            if rsi >= high_rsi:
+                sell_reason = f"RSI ≥ {high_rsi}"
+            elif change_pct >= profit_thresh:
+                sell_reason = f"Profit ≥ {profit_thresh:.1%}"
+            elif change_pct <= loss_thresh:
+                sell_reason = f"Loss ≤ {loss_thresh:.1%}"
+            elif row["ema_diff"] < row["ema_diff_prev"]:
+                sell_reason = "EMA diff shrinking"
+
+            if sell_reason:
+                df.at[time, "sell_signal_raw"] = -1
+                if i + delay < len(df):
+                    df.iat[i + delay, df.columns.get_loc("sell_signal")] = -1
+                    sell_row = df.iloc[i + delay]
+                    sell_time = sell_row.name
+                    sell_price = sell_row["close"]
+                    sell_datetime = sell_row["timestamp"] if "timestamp" in sell_row else sell_time
+                else:
+                    print(time)
+                    print(f'❗ {sell_reason} triggered but cannot delay (out of bound)')
+                    sell_datetime = row["timestamp"] if "timestamp" in row else time
+                    sell_price = current_price
+                    df.at[time, "sell_signal"] = -1
+
+                trades.append({
+                    "Buy_Time": buy_datetime,
+                    "Sell_Time": sell_datetime,
+                    "Buy_Price": buy_price,
+                    "Sell_Price": sell_price,
+                    "Return": (sell_price - buy_price) / buy_price,
+                    "Sell_Reason": sell_reason
+                })
+                holding = False
+                buy_datetime = None
+
+    return df, trades,base_rsi
