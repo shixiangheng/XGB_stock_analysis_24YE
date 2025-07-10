@@ -52,19 +52,48 @@ def apply_strategy(df):
     
     #df, trades = generate_signals_and_backtest(df)
     #df,trades = generate_rsi3070_signals_and_backtest_delay(df,0,40,60)
-    df,trades,base_rsi = generate_rsi_dynamic_signals_and_backtest_delay(df,4,40,60)
+    delay_bars = 3
+    df,trades,base_rsi = generate_rsi_dynamic_signals_and_backtest_delay(df,delay_bars,40,60)
     print(f'now lower RSI is {base_rsi}')
+    
+    
     # 🔔 只对最新K线触发信号播放声音
     latest = df.iloc[-1]
     # 转时区
     latest_time_eastern = latest.name.tz_convert(eastern) if latest.name.tzinfo else pytz.utc.localize(latest.name).astimezone(eastern)
+    print("latest bar info:")
+    print(f"bar {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')}, close price = {latest['close']:.2f}")
+    
 
+    latest_index = df.index[-1]
+    latest = df.loc[latest_index]
+    latest_time_eastern = latest["timestamp"].tz_convert("America/New_York")
+
+    # Define delay window
+    lookback = df.iloc[-delay_bars:-1] if delay_bars > 1 else df.iloc[[-2]]
+    if latest["signal_raw"] == 1:
+        print('latest bar: show raw buy signal!!!')
+    if latest["sell_signal_raw"] == -1:
+        print('latest bar: raw sell signal identified!!!')
+
+    # 1. Handle BUY signal
     if latest["signal"] == 1:
-        print(f"📈 BUY SIGNAL @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')}, open = {latest['close']:.2f}")
+        future_window = df.iloc[-delay_bars:]
         play_alert("buy")
+        if any(future_window["sell_signal_raw"] == -1):
+            print(f"⚠️ WARNING: Ignored BUY signal @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} – upcoming SELL signal within delay window")  
+        else:
+            print(f"📈 BUY SIGNAL @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')}, close = {latest['close']:.2f}")
+            
+
+    # 2. Handle SELL signal
     elif latest["sell_signal"] == -1:
-        print(f"💰 SELL SIGNAL @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')}, close = {latest['close']:.2f}")
+        recent_window = lookback
         play_alert("sell")
+        if any(recent_window["signal_raw"] == 1):
+            print(f"⚠️ WARNING: Ignored SELL signal @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')} – recent BUY signal within delay window") 
+        else:
+            print(f"💰 SELL SIGNAL @ {latest_time_eastern.strftime('%Y-%m-%d %H:%M:%S %Z')}, close = {latest['close']:.2f}")      
     check_recent_deals(df,trades,show_reason)
 
 

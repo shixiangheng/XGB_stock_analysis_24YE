@@ -542,7 +542,7 @@ def generate_rsi_dynamic_signals_and_backtest_delay(df, delay=3, low_rsi_base=30
     hard_lower = 35
     hard_upper = 50
     # --- Iterate to detect signal with dynamic RSI adjustment ---
-    for i in range(3, len(df) - 3):  # Ensure enough context before/after
+    for i in range(3, len(df)):  # Ensure enough context before/after
         if base_rsi<hard_lower or base_rsi>hard_upper:
             base_rsi = 40
         rsi_prev = df.at[df.index[i - 1], "rsi"]
@@ -551,7 +551,6 @@ def generate_rsi_dynamic_signals_and_backtest_delay(df, delay=3, low_rsi_base=30
         if pd.notna(rsi_prev) and pd.notna(rsi_now) and rsi_prev < base_rsi <= rsi_now:
             close_now = df.at[df.index[i], "close"]
             closes_before = df["close"].iloc[i - 3:i]
-            closes_after = df["close"].iloc[i + 1:i + 4]
 
             # Adjust low_rsi downward if prior 3 closes are all lower
             if all(cl < close_now for cl in closes_before):
@@ -560,11 +559,7 @@ def generate_rsi_dynamic_signals_and_backtest_delay(df, delay=3, low_rsi_base=30
                     base_rsi -= 0.1 * abs(low_close_rsi - base_rsi)
             else:
                 base_rsi += 0.1
-            # # Adjust low_rsi upward if next 3 closes are all lower
-            # elif all(cl < close_now for cl in closes_after):
-            #     low_close_rsi = df["rsi"].iloc[i + 1:i + 4].loc[closes_after.idxmin()]
-            #     if low_close_rsi < base_rsi:
-            #         base_rsi += 0.1 * abs(low_close_rsi - base_rsi)
+            
 
             # Final buy condition check
             if (
@@ -574,7 +569,7 @@ def generate_rsi_dynamic_signals_and_backtest_delay(df, delay=3, low_rsi_base=30
                 df.at[df.index[i], "vol_up"]
             ):
                 df.at[df.index[i], "signal_raw"] = 1
-
+            
     # --- Delayed Buy Signal ---
     df["signal"] = df["signal_raw"].shift(delay).fillna(0)
 
